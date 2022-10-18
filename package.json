@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Basher0303/Discord-Music-Bot#readme",
   "dependencies": {
-    "discord.js": "^14.6.0"
+    "discord.js": "^14.6.0",
+    "ytdl-core": "^4.11.2"
   }
 }
