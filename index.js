@@ -2,8 +2,26 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
+const { DisTube } = require("distube");
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+//All 
+const client = new Client({ 
+	intents: 32767
+});
+
+client.DisTube = new DisTube(client, {
+	leaveOnStop: false,
+	emitNewSongOnly: true,
+	emitAddSongWhenCreatingQueue: false,
+	emitAddListWhenCreatingQueue: false,
+});
+
+client.DisTube.on('playSong', (queue, song) => {
+	queue.textChannel.send(`Сейчас играет: ${song.name}`);
+	console.log(queue);
+});
+
 
 //Read Commands
 client.commands = new Collection();
