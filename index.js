@@ -1,9 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
-const { token } = require('./config.json');
+const { token, weatherApiKey } = require('./config.json');
 const { DisTube } = require("distube");
-
 
 //All 
 const client = new Client({ 
