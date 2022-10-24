@@ -54,11 +54,6 @@ module.exports = {
 				}
 				await asyncСycle(arrayNumEmoj);
 
-
-
-				const filter = (reaction, user) => {
-					return !user.bot;
-				};
 				
 				const collector = addedMsg.createReactionCollector({ filter: (reaction, user) => {
 					return !user.bot;

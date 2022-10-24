@@ -5,7 +5,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 
 const { createAudioPlayer } = require('@discordjs/voice');
-const { embedAddedTrack } = require ('../functions/embedAddedTrack.js');
+const { embedAddedTrack } = require ('../functions');
 
 
 module.exports = {
