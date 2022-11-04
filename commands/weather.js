@@ -16,9 +16,13 @@ const arrayEmojies = {
 };
 
 const arrayCities = {
-	'gagino' : {name: 'Гагино', id: 562209, urlImage: 'https://files.pravda-nn.ru/2019/12/gagino.jpg'},
-	'nn' : {name: 'Нижний Новгород', id: 520555, urlImage: 'https://aboutnizhnynovgorod.ru/imags/nizhniy_novgorod.jpg'},
+	'gagino' : {name: 'Гагино', lat: 55.2314, lon: 45.0339},
+	'nn' : {name: 'Нижний Новгород', lat: 56.3287, lon: 44.002},
 };
+
+function getMoment(unix) {
+	return moment(unix * 1000).utcOffset(3);
+}
 
 function degToDir(deg) {
 	if(deg < 15 || deg > 345) return 'З';
@@ -39,8 +43,8 @@ function getMinAndMaxTemp(data) {
 		let item = data[i];
 
 		pastDay = curDay;
-		curDay = moment(item.dt * 1000).format('D');
-		
+		curDay = getMoment(item.dt).format('D');
+
 		if(curDay == pastDay) {
 			if(item.main.temp < minTemp)
 				minTemp = item.main.temp;
@@ -62,12 +66,13 @@ function getMinAndMaxTemp(data) {
 
 function getForecastEmbed(data) {
 	let currData = data.list[0];
-	let temperatureData = getMinAndMaxTemp(data.list).slice(1, -1);
+	let temperatureData = getMinAndMaxTemp(data.list);
+	temperatureData = temperatureData.slice(temperatureData[0].numDay == getMoment(currData.dt).format('D') ? 0 : 1, -1);
 
 	let formattedData = [];
-	for (let j = 7, i = 0; j < data.list.length && i < 4; j += 8, i += 1) {
+	for (let j = 7, i = 0; j < data.list.length && i < temperatureData.length; j += 8, i += 1) {
 		let item = data.list[j];
-		let itemDate = moment(item.dt * 1000);
+		let itemDate = getMoment(item.dt);
 		
 		formattedData.push({ name: itemDate.format('D MMMM'), value: toFirstLetterUpper(itemDate.format('dddd')), inline: true});
 		formattedData.push({ name: `${temperatureData[i].max.toFixed(1)} ℃ Макс.`, value: `${temperatureData[i].min.toFixed(1)} ℃ Мин.`, inline: true});
@@ -82,19 +87,27 @@ function getForecastEmbed(data) {
 		.addFields(
 			{ name: ':thermometer: Температура:', value: `${currData.main.temp.toFixed(1)} ℃`, inline: true },
 			{ name: ':dash: Скорость ветра:', value: `${currData.wind.speed.toFixed(1)}м/с (${degToDir(currData.wind.speed.deg)})`, inline: true },
-			{ name: ':sun_with_face: Время восхода:', value: moment(data.city.sunrise * 1000).format('H:mm'), inline: true },
+			{ name: ':sun_with_face: Время восхода:', value: getMoment(data.city.sunrise).format('H:mm'), inline: true },
 			)
 		.addFields(
 			{ name: ':thermometer_face: Ощущается как:', value: `${currData.main.feels_like.toFixed(1)} ℃`, inline: true },
 			{ name: ':cloud: Облачность:', value: `${currData.clouds.all}%`, inline: true },
-			{ name: ':new_moon_with_face: Время заката:', value: moment(data.city.sunset * 1000).format('H:mm'), inline: true },
+			{ name: ':new_moon_with_face: Время заката:', value: getMoment(data.city.sunset).format('H:mm'), inline: true },
 		)
 		.addFields(
 			{ name: '\u200B', value: '\u200B', inline: true },
-			{ name: '\u200B', value: 'Прогноз на 4 дня', inline: true },
+			{ name: '\u200B', value: `Прогноз на ${temperatureData.length} ${declOfNum(temperatureData.length, ['день', 'дня', 'дней'])}`, inline: true },
 			{ name: '\u200B', value: '\u200B', inline: true },
 		)
 		.addFields(formattedData);
+}
+
+async function requestWeather(name, lat, lon) {
+	const resForecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${weatherApiKey}`);
+	const result = await resForecast.json();
+	result.city.name = name;
+
+	return result;
 }
 
 module.exports = {
@@ -130,54 +143,69 @@ module.exports = {
 
 		try {
 			if(subCommand == 'home'){
-				const city = interaction.options.getString('city');
-				const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?id=${arrayCities[city].id}&units=metric&lang=ru&appid=${weatherApiKey}`);
-				const data = await res.json();
-					 
-				await interaction.reply({embeds: [getForecastEmbed(data)]});          
+				const city = arrayCities[interaction.options.getString('city')];
+				const dataForecast = await requestWeather(city.name, city.lat, city.lon);
+
+				return interaction.reply({embeds: [getForecastEmbed(dataForecast)]});       
 			}
 			else if(subCommand == 'find') {
 				const city = interaction.options.getString('city');
 				const resCities = await fetch(`http://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=10&appid=${weatherApiKey}`);
 				const dataCities = await resCities.json();
 
-				const formatedCities = [];
-				dataCities.forEach((item, index) => {
-					formatedCities.push({
-						name: `${index+1}. ${(item.local_names && item.local_names.ru) ? item.local_names.ru : item.name}`,
-						value: item.state ?? item.country
+
+				if(dataCities.length == 0) {
+					return interaction.reply({
+						embeds: [
+							new EmbedBuilder()
+								.setTitle(`:disappointed: По вашему запросу ничего не найдено.`)
+								.setFooter({ text: 'Попробуйте ввести название города на другом языке.'})
+						],
+					});  
+				}
+				else if(dataCities.length == 1) {
+					const cityItem = dataCities[0];
+					const cityName = (cityItem.local_names && cityItem.local_names.ru) ? cityItem.local_names.ru : cityItem.name;
+					const dataForecast = await requestWeather(cityName, cityItem.lat, cityItem.lon);
+
+					return interaction.reply({embeds: [getForecastEmbed(dataForecast)]});  
+				}
+				else {
+					const formatedCities = [];
+					dataCities.forEach((item, index) => {
+						formatedCities.push({
+							name: `${index+1}. ${(item.local_names && item.local_names.ru) ? item.local_names.ru : item.name}`,
+							value: item.state ?? item.country
+						});
 					});
-				});
 
-				const embed = new EmbedBuilder()
-					.setTitle(`Найдено ${dataCities.length} ${declOfNum(dataCities.length, ['город', 'города', 'городов'])}`)
-					.addFields(formatedCities)
-					.setFooter({ text: 'Нажмите на цифру в реакции.'});
-				const addedMsg = await interaction.reply({
-					embeds: [embed],
-					fetchReply: true
-				});  
+					const embed = new EmbedBuilder()
+						.setTitle(`Найдено ${dataCities.length} ${declOfNum(dataCities.length, ['город', 'города', 'городов'])}`)
+						.addFields(formatedCities)
+						.setFooter({ text: 'Нажмите на цифру в реакции.'});
+					const addedMsg = await interaction.reply({
+						embeds: [embed],
+						fetchReply: true
+					});  
 
-				await asyncAddReacts(addedMsg, arrayNumEmoj.slice(0, dataCities.length));
+					await asyncAddReacts(addedMsg, arrayNumEmoj.slice(0, dataCities.length));
 
-				const collector = addedMsg.createReactionCollector({ filter: (reaction, user) => {
-					return !user.bot;
-				}, max: 1 , time: 15000});
+					const collector = addedMsg.createReactionCollector({ filter: (reaction, user) => {
+						return !user.bot;
+					}, max: 1 , time: 15000});
 
-				collector.on('collect', async (reaction, user) => {
-					const cityItem = dataCities[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
-					const resForecast = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${cityItem.lat}&lon=${cityItem.lon}&units=metric&lang=ru&appid=${weatherApiKey}`);
-					const dataForecast = await resForecast.json();
-					console.log(dataForecast);
-
-					dataForecast.city.name = (cityItem.local_names && cityItem.local_names.ru) ? cityItem.local_names.ru : cityItem.name;
-
-					await channel.send({embeds: [getForecastEmbed(dataForecast)]});  
-				});
-				
-				collector.on('end', collected => {
-					addedMsg.delete();
-				});
+					collector.on('collect', async (reaction, user) => {
+						const cityItem = dataCities[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
+						const cityName = (cityItem.local_names && cityItem.local_names.ru) ? cityItem.local_names.ru : cityItem.name;
+						const dataForecast = await requestWeather(cityName, cityItem.lat, cityItem.lon);
+	
+						await channel.send({embeds: [getForecastEmbed(dataForecast)]});  
+					});
+					
+					collector.on('end', collected => {
+						addedMsg.delete();
+					});
+				}
 			}
 		} catch(e) {
 			const errorEmbed = new EmbedBuilder()
