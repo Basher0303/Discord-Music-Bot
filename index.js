@@ -1,13 +1,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, EmbedBuilder } = require('discord.js');
 const { token, weatherApiKey } = require('./config.json');
 const { DisTube } = require("distube");
+const deployCommands = require("./deploy-commands");
 
 //All 
 const client = new Client({ 
 	intents: 32767
 });
+
+let message;
 
 client.DisTube = new DisTube(client, {
 	leaveOnStop: false,
@@ -16,10 +19,28 @@ client.DisTube = new DisTube(client, {
 	emitAddListWhenCreatingQueue: false,
 });
 
-client.DisTube.on('playSong', (queue, song) => {
-	queue.textChannel.send(`Сейчас играет: ${song.name}`);
-	console.log(queue);
-});
+client.DisTube
+	.on('playSong', async (queue, song) => {
+		const embed = new EmbedBuilder()
+			.setAuthor({ name: `Сейчас играет:`})
+			.setTitle(song.name)
+			.setThumbnail(song.thumbnail)
+			.addFields(
+				{ name: 'Длительность: ', value: song.formattedDuration, inline: true },
+			);
+		if(message == null) 
+			message = queue.textChannel.send({ embeds: [embed] });
+		else
+			message.update({ embeds: [embed] });
+			
+	})
+	.on('addSong', async (queue, song) => {
+		console.log(song);
+		const msg = queue.textChannel.send(`Песня ${song.name} добавлена в очередь.`);
+		setInterval(() => {
+			msg.delete();
+		}, 5000);
+	});
 
 
 //Read Commands
