@@ -53,4 +53,9 @@ for (const file of eventFiles) {
 	}
 }
 
+client.on('guildCreate', async (guild) => {
+	deployCommands(guild.id);
+})
+
+
 client.login(token);
