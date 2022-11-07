@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "deploy": "scp -P3333 -r /home/alex/Projects/Discord-Music-Bot/* root@185.253.46.162:/home/discord-bot/release",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "p": "prettier . --write",
