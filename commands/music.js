@@ -1,7 +1,23 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const { createAudioPlayer } = require('@discordjs/voice');
-const { declOfNum, asyncAddReacts, arrayNumEmoj } = require ('../functions');
+const { declOfNum, asyncAddReacts, isValidUrl, arrayNumEmoj } = require ('../functions');
+
+
+function getSongsListEmbed(resultSearch, isAddedSongsArr) {
+	const formatedTracks = [];
+	resultSearch.forEach((item, index) => {
+		formatedTracks.push({
+			name: `${isAddedSongsArr[index] ? '✅' : '\u200B'} ${index+1}. ${item.name}`,
+			value: item.formattedDuration
+		});
+	});
+
+	return new EmbedBuilder()
+		.setTitle(`Найдено ${formatedTracks.length} ${declOfNum(formatedTracks.length, ['песня', 'песни', 'песен'])}`)
+		.addFields(formatedTracks)
+		.setFooter({ text: 'Нажмите на цифру в реакции.'});
+}
 
 
 module.exports = {
@@ -37,11 +53,42 @@ module.exports = {
 		// }
 
 		try {
-			const query = interaction.options.getString('query');
+			let query = interaction.options.getString('query').trim();
+			const indexSubStr = query.indexOf('youtube.com/watch?');
+			let isYouTubeURL = false;
+
+			console.log(indexSubStr);
+			switch(indexSubStr) {
+				case 0: {
+					query = 'https://www.' + query;
+					isYouTubeURL = true;
+					break;
+				}
+				case 4 : {
+					isYouTubeURL = true;
+					query = 'https://' + query;
+					break;
+				}
+				case 12 : {
+					isYouTubeURL = true;
+					break;
+				}
+				default: 
+					break;
+			}
+			if(isYouTubeURL) {
+				client.DisTube.play(voiceChannel, query, {
+					member: member,
+					textChannel: channel,
+				});
+				return true;
+			}
+
 			const resultSearch = await client.DisTube.search(query, {
 				limit: 5,
+				safeSearch: true,
 			});
-			//console.log(resultSearch);
+			let isAddedSongs = [false, false, false, false, false];
 
 			if(resultSearch.length == 0) {
 				return interaction.reply({
@@ -52,33 +99,23 @@ module.exports = {
 					],
 				});  
 			}
-			else {
-				const formatedTracks = [];
-				resultSearch.forEach((item, index) => {
-					formatedTracks.push({
-						name: `${index+1}. ${item.name}`,
-						value: item.formattedDuration
-					});
-				});
-
-				const embed = new EmbedBuilder()
-					.setTitle(`Найдено ${formatedTracks.length} ${declOfNum(formatedTracks.length, ['песня', 'песни', 'песен'])}`)
-					.addFields(formatedTracks)
-					.setFooter({ text: 'Нажмите на цифру в реакции.'});
+			else {		
+				let embed = getSongsListEmbed(resultSearch, isAddedSongs);
 				const addedMsg = await interaction.reply({
 					embeds: [embed],
 					fetchReply: true
-				}); 		
-				
+				}); 
 				await asyncAddReacts(addedMsg, arrayNumEmoj.slice(0, resultSearch.length));
 
 				const collector = addedMsg.createReactionCollector({ filter: (reaction, user) => {
-					return !user.bot;
-				}, max: 1 , time: 15000});
+					return !user.bot && !isAddedSongs[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
+				}, time: 15000});
 
 				collector.on('collect', async (reaction, user) => {
 					const trackItem = resultSearch[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
-					const trackName = trackItem.name;
+					isAddedSongs[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)] = true;
+					embed = getSongsListEmbed(resultSearch, isAddedSongs);
+					addedMsg.edit({embeds: [embed]});
 
 					client.DisTube.play(voiceChannel, trackItem.url, {
 						member: member,
