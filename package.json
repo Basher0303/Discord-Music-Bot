@@ -1,22 +1,15 @@
 {
-  "name": "distube-example",
+  "name": "djmurad",
   "version": "1.0.0",
   "description": "DisTube example music bot.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "deploy": "scp -P3333 -r /home/alex/Projects/Discord-Music-Bot/* root@185.253.46.162:/home/discord-bot/release",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
-    "p": "prettier . --write",
-    "postinstall": "husky install"
+    "deploy": "scp -P3333 -r /home/alex/Projects/Discord-Music-Bot/* root@185.253.46.162:/home/discord-bot/release"
   },
-  "author": "Skick",
+  "author": "Basher",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/distubejs/example/issues"
-  },
-  "homepage": "https://github.com/distubejs/example#readme",
+  "homepage": "https://github.com/Basher0303/Discord-Music-Bot",
   "dependencies": {
     "@discordjs/opus": "^0.8.0",
     "@discordjs/voice": "^0.11.0",
