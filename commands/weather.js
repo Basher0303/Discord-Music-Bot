@@ -140,7 +140,6 @@ module.exports = {
 	async execute(interaction) {
 		const { options, member, guild, channel, client} = interaction;
 		const subCommand = interaction.options.getSubcommand();
-
 		try {
 			if(subCommand == 'home'){
 				const city = arrayCities[interaction.options.getString('city')];

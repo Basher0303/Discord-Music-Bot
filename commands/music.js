@@ -1,10 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
-const { createAudioPlayer } = require('@discordjs/voice');
-const { declOfNum, asyncAddReacts, isValidUrl, arrayNumEmoj } = require ('../functions');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { declOfNum, asyncAddReacts, arrayNumEmoj } = require ('../functions');
 
 
-function getSongsListEmbed(resultSearch, isAddedSongsArr) {
+function getSongsListPanel(resultSearch, isAddedSongsArr) {
 	const formatedTracks = [];
 	resultSearch.forEach((item, index) => {
 		formatedTracks.push({
@@ -13,10 +11,18 @@ function getSongsListEmbed(resultSearch, isAddedSongsArr) {
 		});
 	});
 
-	return new EmbedBuilder()
+	const arr = [];
+	for (let i = 0; i < resultSearch.length && arrayNumEmoj.length; i++) {
+		arr.push(new ButtonBuilder().setCustomId(`songsList_${i+1}`).setEmoji(arrayNumEmoj[i]).setStyle(isAddedSongsArr[i] ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(isAddedSongsArr[i]));
+	}
+	const rowFirst = new ActionRowBuilder().addComponents(arr);	
+
+	const embed =  new EmbedBuilder()
 		.setTitle(`Найдено ${formatedTracks.length} ${declOfNum(formatedTracks.length, ['песня', 'песни', 'песен'])}`)
 		.addFields(formatedTracks)
-		.setFooter({ text: 'Нажмите на цифру в реакции.'});
+		.setFooter({ text: 'Панель скроется через 15 секунд.'});
+
+	return {embeds: [embed], components: [rowFirst], ephemeral: true};
 }
 
 
@@ -53,11 +59,14 @@ module.exports = {
 		// }
 
 		try {
+			await interaction.reply({embeds: [
+				new EmbedBuilder().setDescription('Немного подождите, Мурад ищет песни 🧐')
+			]});
+
 			let query = interaction.options.getString('query').trim();
 			const indexSubStr = query.indexOf('youtube.com/watch?');
 			let isYouTubeURL = false;
 
-			console.log(indexSubStr);
 			switch(indexSubStr) {
 				case 0: {
 					query = 'https://www.' + query;
@@ -100,22 +109,15 @@ module.exports = {
 				});  
 			}
 			else {		
-				let embed = getSongsListEmbed(resultSearch, isAddedSongs);
-				const addedMsg = await interaction.reply({
-					embeds: [embed],
-					fetchReply: true
-				}); 
-				await asyncAddReacts(addedMsg, arrayNumEmoj.slice(0, resultSearch.length));
+				const addedMsg = await interaction.editReply(getSongsListPanel(resultSearch, isAddedSongs)); 
+				const collector = addedMsg.createMessageComponentCollector({ componentType: ComponentType.Button, time: 15000 });
 
-				const collector = addedMsg.createReactionCollector({ filter: (reaction, user) => {
-					return !user.bot && !isAddedSongs[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
-				}, time: 15000});
-
-				collector.on('collect', async (reaction, user) => {
-					const trackItem = resultSearch[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)];
-					isAddedSongs[arrayNumEmoj.findIndex(item => item == reaction.emoji.name)] = true;
-					embed = getSongsListEmbed(resultSearch, isAddedSongs);
-					addedMsg.edit({embeds: [embed]});
+				collector.on('collect', async (button) => {
+					button.deferUpdate();
+					const numSong = +button.customId.replace('songsList_', '');
+					const trackItem = resultSearch[numSong-1];
+					isAddedSongs[numSong-1] = true;
+					addedMsg.edit(getSongsListPanel(resultSearch, isAddedSongs));
 
 					client.DisTube.play(voiceChannel, trackItem.url, {
 						member: member,
@@ -131,7 +133,7 @@ module.exports = {
 		} catch(e) {
 			const errorEmbed = new EmbedBuilder()
 				.setDescription(`Ошибка: ${e}`);
-			return interaction.reply({embeds: [errorEmbed]});
+			return interaction.editReply({embeds: [errorEmbed]});
 		}
 	},
 };

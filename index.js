@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, EmbedBuilder } = require('discord.js');
+const { Client, Collection, EmbedBuilder,  ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ModalBuilder, TextInputBuilder, TextInputStyle} = require('discord.js');
 const { token, weatherApiKey } = require('./config.json');
 const { DisTube } = require("distube");
 const deployCommands = require("./deploy-commands");
@@ -23,7 +23,7 @@ client.DisTube = new DisTube(client, {
 });
 
 
-function getPlayerEmbed(queue) {
+function getPlayerPanel(queue) {
 	const firstSong = queue.songs[0];
 	let queueFormatted = [];
 
@@ -31,8 +31,23 @@ function getPlayerEmbed(queue) {
 		if(index != 0)
 			queueFormatted.push({ name: `${index}. ${item.name}`, value: `\`${item.formattedDuration}\``});
 	});
+	
+	const rowFirst = new ActionRowBuilder()
+		.addComponents(
+			new ButtonBuilder().setCustomId('playerStart').setEmoji(queue.paused ? '▶️' : '⏸️').setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId('playerSkip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId('playerLoop').setEmoji('🔁').setStyle(queue.repeatMode == 1 ? ButtonStyle.Primary : ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId('playerShuffle').setEmoji('🔀').setStyle(ButtonStyle.Secondary).setDisabled(queue.songs.length < 2),
+			new ButtonBuilder().setCustomId('playerClose').setEmoji('✖️').setStyle(ButtonStyle.Danger),
+	);	
 
-	queue.songs
+	const rowSecond = new ActionRowBuilder()
+		.addComponents(
+			new ButtonBuilder().setCustomId('playerVolumeDown').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId('playerVolumeUp').setEmoji('🔊').setStyle(ButtonStyle.Secondary),
+			//new ButtonBuilder().setCustomId('playerVolumeSet').setEmoji('⏩').setStyle(ButtonStyle.Secondary),
+	);	
+
 	const embed = new EmbedBuilder()
 		.setTitle(firstSong.name)
 		.setURL(firstSong.url)
@@ -40,9 +55,9 @@ function getPlayerEmbed(queue) {
 		.setDescription(`\`${firstSong.formattedDuration}\``)
 		.setThumbnail(firstSong.thumbnail)
 		.addFields(
-			{ name: 'Длительность ', value: `\`${firstSong.formattedDuration}\``, inline: true },
 			{ name: 'Статус ', value: `\`${queue.paused ? 'Пауза' : 'Играет'}\``, inline: true },
 			{ name: 'Повторение', value: `\`${queue.repeatMode == 1 ? 'Включено' : 'Выключено'}\``, inline: true },
+			{ name: 'Громкость ', value: `\`${queue.volume}\``, inline: true },
 		)
 		.addFields(
 			queueFormatted.length > 0 ? [{ name: '\u200B', value: '\u200B', inline: true },
@@ -51,62 +66,91 @@ function getPlayerEmbed(queue) {
 		)
 		.addFields(queueFormatted);
 
-	return embed;
+	return {embeds: [embed], components: [rowFirst, rowSecond]};
 }
-
 
 client.DisTube
 	.on('playSong', async (queue, song) => {
-		let playerMessage = client.serversInfo[queue.id].playerMessage;
+		let playerMessage = client.serversInfo[queue.id].playerMessage;	
 
 		if(playerMessage == null){
-			playerMessage = await queue.textChannel.send({ embeds: [getPlayerEmbed(queue)] });
+			playerMessage = await queue.textChannel.send(getPlayerPanel(queue));
 			client.serversInfo[queue.id].playerMessage = playerMessage;
-			await asyncAddReacts(playerMessage, ['⏯️', '⏭️', '🔁', '🔀', '❌']);
 
-			const collector = playerMessage.createReactionCollector({ filter: (reaction, user) => {
-				return !user.bot;
-			}, dispose: true });
+			const collector = playerMessage.createMessageComponentCollector({ componentType: ComponentType.Button });
 
-			async function funcCollector(reaction, user) {
-				if(reaction.emoji.name == '⏯️') {
+			collector.on('collect', async (button) => {
+				if(button.customId == 'playerStart') {
+					button.deferUpdate();
 					if(!queue.paused)
 						await queue.pause(playerMessage);
 					else 
 						await queue.resume(playerMessage);
 				}
-				else if(reaction.emoji.name == '⏭️') {
+				else if(button.customId == 'playerSkip') {
+					button.deferUpdate();
 					if(queue.songs.length > 1)
 						await queue.skip();
 					else	
 						await queue.stop();
 				}
-				else if(reaction.emoji.name == '🔁') {
+				else if(button.customId == 'playerLoop') {
+					button.deferUpdate();
 					if(queue.repeatMode == 0)
 						await queue.setRepeatMode(1);
 					else 
 						await queue.setRepeatMode(0);
 				}
-				else if(reaction.emoji.name == '🔀') {
+				else if(button.customId == 'playerShuffle') {
+					button.deferUpdate();
 					await queue.shuffle();
 				}
-				else if(reaction.emoji.name == '❌') {
+				else if(button.customId == 'playerVolumeDown') {
+					button.deferUpdate();
+					if(queue.volume - 10 > 0)
+						await queue.setVolume(queue.volume - 10);
+				}
+				else if(button.customId == 'playerVolumeUp') {
+					button.deferUpdate();
+					await queue.setVolume(queue.volume + 10);
+				}
+				else if(button.customId == 'playerClose') {
+					button.deferUpdate();
 					await queue.stop();
+				}
+				else if(button.customId == 'playerVolumeSet') {
+					const modal = new ModalBuilder()
+						.setCustomId('myModal')
+						.setTitle('Перемотать песню на определенное время');
+			
+					const favoriteColorInput = new TextInputBuilder()
+						.setCustomId('timecodeInput')
+						.setLabel('Укажите тайм-код песни.')
+						.setStyle(TextInputStyle.Short)
+						.setMaxLength(8)
+						.setMinLength(1)
+						.setPlaceholder('Например 11:02')
+						.setRequired(true);
+		
+			
+					const firstActionRow = new ActionRowBuilder().addComponents(favoriteColorInput);
+			
+					modal.addComponents(firstActionRow);
+			
+					await button.showModal(modal);	
 				}
 
 				if(playerMessage && queue && queue.songs.length > 0)
-					playerMessage.edit({ embeds: [getPlayerEmbed(queue)] });
-			}
-
-			collector.on('collect', funcCollector).on('remove', funcCollector);
+			 		playerMessage.edit(getPlayerPanel(queue));
+			});
 		}
 		else
-			playerMessage.edit({ embeds: [getPlayerEmbed(queue)] });
+			playerMessage.edit(getPlayerPanel(queue));
 			
 	})
 	.on('addSong', async (queue, song) => {
 		if(client.serversInfo[queue.id].playerMessage){
-			client.serversInfo[queue.id].playerMessage.edit({ embeds: [getPlayerEmbed(queue)] });
+			client.serversInfo[queue.id].playerMessage.edit(getPlayerPanel(queue));
 		}
 	})
 	.on('finish', async (queue, song) => {

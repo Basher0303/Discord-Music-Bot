@@ -15,18 +15,11 @@ function toFirstLetterUpper(word) {
 	return result.join('');
 }
 
-function isValidUrl(url) {
-  var objRE = /(^https?:\/\/)?[a-z0-9~_\-\.]+\.[a-z]{2,9}(\/|:|\?[!-~]*)?$/i;
-  return objRE.test(url);
-}
-
-
 async function asyncAddReacts(message, array) {
     for (const item of array) {
       await message.react(`${item}`);
     }
 }
-
 
 const arrayNumEmoj = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
@@ -35,6 +28,5 @@ module.exports = {
     declOfNum,
     asyncAddReacts,
     toFirstLetterUpper,
-    isValidUrl,
     arrayNumEmoj
 };
