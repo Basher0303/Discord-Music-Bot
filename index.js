@@ -129,7 +129,7 @@ for (const file of eventFiles) {
 	}
 }
 
-
+//Read buttons
 client.buttons = new Collection();
 const buttonFolders = fs.readdirSync('./buttons');
 for(const folder of buttonFolders) {
@@ -137,6 +137,17 @@ for(const folder of buttonFolders) {
 	for (const file of buttonFiles) {
 		const button = require(`./buttons/${folder}/${file}`);
 		client.buttons.set(button.data.name, button);
+	}
+}
+
+//Read modals
+client.modals = new Collection();
+const modalFolders = fs.readdirSync('./modals');
+for(const folder of modalFolders) {
+	const modalFiles = fs.readdirSync(`./modals/${folder}`).filter(file => file.endsWith('.js'));
+	for (const file of modalFiles) {
+		const modal = require(`./modals/${folder}/${file}`);
+		client.modals.set(modal.data.name, modal);
 	}
 }
 

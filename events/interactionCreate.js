@@ -43,6 +43,23 @@ module.exports = {
                     ephemeral: true
                 });
             }
+        } else if (interaction.isModalSubmit()) {
+            const modal = interaction.client.modals.get(interaction.customId);
+
+            if(!modal) {
+                console.error(`Модальное окно ${interaction.customId} не найдено`);
+                return;
+            }
+
+            try {
+                await modal.execute(interaction);
+            } catch(error) {
+                console.log(error);
+                await interaction.reply({
+                    content: 'Ты сделал Мураду больно. Я не знаю как у тебя это удалось, но постарайся больше так не делать.',
+                    ephemeral: true
+                });
+            }
         }
 	},
 };
