@@ -5,6 +5,7 @@ const { weatherApiKey } = require('../config.json');
 const { declOfNum, arrayNumEmoj, asyncAddReacts, toFirstLetterUpper } = require ('../functions');
 moment.locale('ru');
 
+const weatherChartApi = "https://quickchart.io/chart/render/zm-4dffc4c0-e3c7-42dc-9662-e22214482def";
 
 const arrayEmojies = {
 	200: ':thunder_cloud_rain:', 201: ':thunder_cloud_rain:', 202: ':thunder_cloud_rain:', 210: ':thunder_cloud_rain:', 211: ':thunder_cloud_rain:', 212: ':thunder_cloud_rain:', 221: ':thunder_cloud_rain:', 230: ':thunder_cloud_rain:', 231: ':thunder_cloud_rain:', 232: ':thunder_cloud_rain:',
@@ -64,8 +65,31 @@ function getMinAndMaxTemp(data) {
 	return result;
 }
 
+function getDataForChart(data) {
+	let result = [];
+
+	for (let i = 0, numSkip = 0; i < data.length; i++, numSkip++) {
+		const item = data[i];
+		const itemDate = getMoment(item.dt);
+		const itemHours = itemDate.format('HH');
+
+		if(numSkip > 1)
+			numSkip = 0;
+		if(numSkip == 0 || itemHours == '00') {
+			result.push({
+				date: itemHours == '00' ? itemDate.format('D%20MMM') : itemDate.format('HH:mm'),
+				temp: `${item.main.temp}` 
+			})
+			numSkip = 0;
+		}
+	}
+
+	return result;
+}
+
 function getForecastEmbed(data) {
 	let currData = data.list[0];
+	let chartData = getDataForChart(data.list);
 	let temperatureData = getMinAndMaxTemp(data.list);
 	temperatureData = temperatureData.slice(temperatureData[0].numDay == getMoment(currData.dt).format('D') ? 0 : 1, -1);
 
@@ -99,7 +123,8 @@ function getForecastEmbed(data) {
 			{ name: '\u200B', value: `Прогноз на ${temperatureData.length} ${declOfNum(temperatureData.length, ['день', 'дня', 'дней'])}`, inline: true },
 			{ name: '\u200B', value: '\u200B', inline: true },
 		)
-		.addFields(formattedData);
+		.addFields(formattedData)
+		.setImage(`${weatherChartApi}?data1=${chartData.map(item => item.temp).join()}&labels=${chartData.map(item => item.date).join()}`);
 }
 
 async function requestWeather(name, lat, lon) {
