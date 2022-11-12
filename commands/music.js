@@ -86,6 +86,7 @@ module.exports = {
 					break;
 			}
 			if(isYouTubeURL) {
+				interaction.deleteReply();
 				client.DisTube.play(voiceChannel, query, {
 					member: member,
 					textChannel: channel,
@@ -100,7 +101,7 @@ module.exports = {
 			let isAddedSongs = [false, false, false, false, false];
 
 			if(resultSearch.length == 0) {
-				return interaction.reply({
+				return interaction.editReply({
 					embeds: [
 						new EmbedBuilder()
 							.setTitle(`:disappointed: По вашему запросу ничего не найдено.`)
