@@ -7,17 +7,21 @@ module.exports = {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {
+        const client = interaction.client;
+        const quiildId = interaction.member.guild.id;
+        const queue = client.DisTube.queues.collection.get(quiildId);
+
         const modal = new ModalBuilder()
             .setCustomId('playerRewindModal')
-            .setTitle('Перемотать песню на определенное время');
+            .setTitle('Перемотать песню');
 
         const input = new TextInputBuilder()
             .setCustomId('playerRewindInput')
-            .setLabel('Укажите тайм-код песни.')
+            .setLabel(`Укажите тайм-код песни в формате ${queue.songs[0].formattedDuration.replace(/[0-9]/g, '0')}`)
             .setStyle(TextInputStyle.Short)
-            .setMaxLength(8)
+            .setMaxLength(queue.songs[0].formattedDuration.length)
             .setMinLength(1)
-            .setPlaceholder('Например 11:02')
+            .setPlaceholder(`Сейчас ${queue.formattedCurrentTime}`)
             .setRequired(true);
 
         const row = new ActionRowBuilder().addComponents(input);
