@@ -1,6 +1,8 @@
 module.exports = {
     data: {
         name: 'playerLoop',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

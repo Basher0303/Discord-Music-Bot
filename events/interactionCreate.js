@@ -3,13 +3,21 @@ module.exports = {
 	async execute(interaction) {
         if (interaction.isChatInputCommand()){
             const command = interaction.client.commands.get(interaction.commandName);
-        
+            const voiceChannel = interaction.member.voice.channel;
+
             if (!command) {
                 console.error(`No command matching ${interaction.commandName} was found.`);
                 return;
             }
         
             try {
+                if(command.options.inOneVoiceChannel && !voiceChannel){
+                    await interaction.reply({
+                        content: 'Мурад слушает только тех, кто в голосовом канале.',
+                        ephemeral: true,
+                    });
+                    return;
+                }
                 await command.execute(interaction);
             } catch (error) {
                 console.error(error);
@@ -28,7 +36,7 @@ module.exports = {
             }
 
             try{
-                if(button.data.inOneVoiceChannel && (!voiceChannel || !voiceChannel.members.find(guildMember => guildMember.user == interaction.client.user))){
+                if(button.options.inOneVoiceChannel && (!voiceChannel || !voiceChannel.members.find(guildMember => guildMember.user == interaction.client.user))){
                     await interaction.reply({
                         content: 'Мурад слушает только тех, кто с ним в одном голосовом канале.',
                         ephemeral: true,

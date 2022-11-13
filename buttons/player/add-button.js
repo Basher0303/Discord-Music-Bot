@@ -3,6 +3,8 @@ const {ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle} = requi
 module.exports = {
     data: {
         name: 'playerAdd',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

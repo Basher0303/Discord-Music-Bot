@@ -160,8 +160,10 @@ module.exports = {
 						.setDescription('Введите название города')	
 						.setRequired(true)
 				)
-		),
+	),
+	options: {
 
+	},
 	async execute(interaction) {
 		const { options, member, guild, channel, client} = interaction;
 		const subCommand = interaction.options.getSubcommand();

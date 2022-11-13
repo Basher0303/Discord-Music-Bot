@@ -1,6 +1,8 @@
 module.exports = {
     data: {
         name: 'playerShuffle',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

@@ -1,9 +1,10 @@
 const {ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle} = require('discord.js');
 
-
 module.exports = {
     data: {
         name: 'playerRewind',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

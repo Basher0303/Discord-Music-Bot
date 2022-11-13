@@ -1,6 +1,8 @@
 module.exports = {
     data: {
         name: 'playerStart',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

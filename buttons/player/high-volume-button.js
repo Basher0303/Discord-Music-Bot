@@ -1,6 +1,8 @@
 module.exports = {
     data: {
         name: 'playerHighVolume',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

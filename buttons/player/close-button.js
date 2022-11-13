@@ -1,6 +1,8 @@
 module.exports = {
     data: {
         name: 'playerClose',
+    },
+    options: {
         inOneVoiceChannel: true,
     },
     async execute (interaction) {

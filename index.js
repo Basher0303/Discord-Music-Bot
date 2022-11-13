@@ -86,6 +86,7 @@ client.DisTube
 
 	})
 	.on('deleteQueue', async (queue) => {
+
 	})
 	.on('initQueue', async (queue) => {
 		const playerMessage = await queue.textChannel.send(getPlayerPanel(queue));
@@ -97,6 +98,7 @@ client.DisTube
 				playerMessage.edit(getPlayerPanel(queue));
 		});
 	});
+
 
 //Read Commands
 client.commands = new Collection();
